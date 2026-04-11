@@ -78,7 +78,7 @@ app.post('/', async (req, res) => {
     const userId = req.body.source.userId;
     const token = await getAccessToken();
 
-    await sendMessage(userId, token, 'Hello World');
+    await sendMessage(userId, token, 'Hello World2');
     console.log('✅ Hello World送信成功');
   } catch (e) {
     console.error('❌ エラー:', e.response?.data || e.message);
