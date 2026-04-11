@@ -11,6 +11,7 @@ const SERVICE_ACCOUNT = process.env.LW_SERVICE_ACCOUNT;
 const PRIVATE_KEY = process.env.LW_PRIVATE_KEY;
 const BOT_ID = process.env.LW_BOT_ID;
 
+// アクセストークン取得
 async function getAccessToken() {
   const now = Math.floor(Date.now() / 1000);
 
@@ -31,7 +32,10 @@ async function getAccessToken() {
   });
 
   const params = new URLSearchParams();
-  params.append('grant_type', 'urn:ietf:params:oauth:grant-type:jwt-bearer');
+  params.append(
+    'grant_type',
+    'urn:ietf:params:oauth:grant-type:jwt-bearer'
+  );
   params.append('client_id', CLIENT_ID);
   params.append('client_secret', CLIENT_SECRET);
   params.append('assertion', assertion);
@@ -49,6 +53,7 @@ async function getAccessToken() {
   return response.data.access_token;
 }
 
+// メッセージ送信
 async function sendMessage(userId, token, text) {
   await axios.post(
     `https://www.worksapis.com/v1.0/bots/${BOT_ID}/users/${userId}/messages`,
@@ -67,6 +72,7 @@ async function sendMessage(userId, token, text) {
   );
 }
 
+// 受信 → Hello World返信
 app.post('/', async (req, res) => {
   console.log('受信:', JSON.stringify(req.body, null, 2));
   res.sendStatus(200);
@@ -76,15 +82,17 @@ app.post('/', async (req, res) => {
     if (!req.body.source?.userId) return;
 
     const userId = req.body.source.userId;
-    const token = await getAccessToken();
 
-    await sendMessage(userId, token, 'Hello World2');
-    console.log('✅ Hello World送信成功');
+    const token = await getAccessToken();
+    await sendMessage(userId, token, 'Hello World');
+
+    console.log('✅ 送信成功');
   } catch (e) {
     console.error('❌ エラー:', e.response?.data || e.message);
   }
 });
 
+// 動作確認
 app.get('/', (req, res) => {
   res.send('Hello World Server');
 });
