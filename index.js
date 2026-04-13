@@ -119,3 +119,23 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`Server started on ${PORT}`);
 });
+
+// Cron実行用
+if (process.env.CRON === 'true') {
+  (async () => {
+    try {
+      console.log('⏰ Cron実行');
+
+      const token = await getAccessToken();
+      const userId = process.env.LW_TARGET_USER_ID;
+
+      await sendMessage(userId, token, 'Hello World');
+
+      console.log('✅ Cron送信成功');
+      process.exit(0);
+    } catch (e) {
+      console.error('❌ Cronエラー:', e.response?.data || e.message);
+      process.exit(1);
+    }
+  })();
+}
