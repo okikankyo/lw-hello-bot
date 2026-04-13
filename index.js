@@ -104,22 +104,27 @@ app.post('/', async (req, res) => {
     if (!req.body.source?.userId) return;
 
     const userId = req.body.source.userId;
+
+    // 👇 Webhook ON/OFF 切り替え
+    if (process.env.WEBHOOK !== 'true') {
+      console.log('📩 受信のみモード（返信しない）');
+      return;
+    }
+
     const token = await getAccessToken();
 
-// ここから    
-await sendMessage(
-  userId,
-  token,
-  `毎月10日・15日・20日・25日はクリーンデーです🧹
+    await sendMessage(
+      userId,
+      token,
+      `毎月10日・15日・20日・25日はクリーンデーです🧹
 
 次回クリーンデーの日時と場所を確認しています。
 予定通りでよろしいでしょうか？
 
 天気予報はこちら👇
 https://weathernews.jp/onebox/tenki/okinawa/47311/`
-);
-// ここまで
-    
+    );
+
   } catch (e) {
     console.error('❌ 全体エラー:', e.response?.data || e.message);
   }
@@ -144,19 +149,17 @@ if (process.env.CRON === 'true') {
       const token = await getAccessToken();
       const userId = process.env.LW_TARGET_USER_ID;
 
-      // ここから
       await sendMessage(
-  userId,
-  token,
-  `毎月10日・15日・20日・25日はクリーンデーです🧹
+        userId,
+        token,
+        `毎月10日・15日・20日・25日はクリーンデーです🧹
 
 次回クリーンデーの日時と場所を確認しています。
 予定通りでよろしいでしょうか？
 
 天気予報はこちら👇
 https://weathernews.jp/onebox/tenki/okinawa/47311/`
-);
-      // ここまで
+      );
 
       console.log('✅ Cron送信成功');
       process.exit(0);
