@@ -1,7 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
-
+console.log('🔥 NEW VERSION 🔥');
 const app = express();
 app.use(express.json());
 
