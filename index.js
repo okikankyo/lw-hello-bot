@@ -3,6 +3,7 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 
 console.log('🔥 NEW VERSION 🔥');
+console.log('🔥 MESSAGE UPDATED 🔥');
 
 const app = express();
 app.use(express.json());
