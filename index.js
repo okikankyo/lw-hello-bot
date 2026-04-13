@@ -15,6 +15,22 @@ const BOT_ID = process.env.LW_BOT_ID;
 async function getAccessToken() {
   const now = Math.floor(Date.now() / 1000);
 
+  // 追加ここから
+    console.log('CLIENT_ID exists:', !!CLIENT_ID);
+  console.log('CLIENT_SECRET exists:', !!CLIENT_SECRET);
+  console.log('SERVICE_ACCOUNT exists:', !!SERVICE_ACCOUNT);
+  console.log('BOT_ID exists:', !!BOT_ID);
+
+  const privateKey = (PRIVATE_KEY || '')
+    .replace(/^"(.*)"$/s, '$1')
+    .replace(/\\n/g, '\n')
+    .trim();
+
+  console.log('PRIVATE_KEY header ok:', privateKey.includes('BEGIN PRIVATE KEY'));
+  console.log('PRIVATE_KEY footer ok:', privateKey.includes('END PRIVATE KEY'));
+
+  // 追加ここまで
+
   const payload = {
     iss: CLIENT_ID,
     sub: SERVICE_ACCOUNT,
