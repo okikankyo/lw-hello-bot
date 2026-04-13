@@ -1,7 +1,9 @@
 const express = require('express');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
-console.log('🔥 NEW VERSION 🔥');
+
+console.log('🔥 NEW VERSION2 🔥');
+
 const app = express();
 app.use(express.json());
 
@@ -15,8 +17,8 @@ const BOT_ID = process.env.LW_BOT_ID;
 async function getAccessToken() {
   const now = Math.floor(Date.now() / 1000);
 
-  // 追加ここから
-    console.log('CLIENT_ID exists:', !!CLIENT_ID);
+  // 環境変数チェック
+  console.log('CLIENT_ID exists:', !!CLIENT_ID);
   console.log('CLIENT_SECRET exists:', !!CLIENT_SECRET);
   console.log('SERVICE_ACCOUNT exists:', !!SERVICE_ACCOUNT);
   console.log('BOT_ID exists:', !!BOT_ID);
@@ -29,19 +31,12 @@ async function getAccessToken() {
   console.log('PRIVATE_KEY header ok:', privateKey.includes('BEGIN PRIVATE KEY'));
   console.log('PRIVATE_KEY footer ok:', privateKey.includes('END PRIVATE KEY'));
 
-  // 追加ここまで
-
   const payload = {
     iss: CLIENT_ID,
     sub: SERVICE_ACCOUNT,
     iat: now,
     exp: now + 300
   };
-
-  const privateKey = PRIVATE_KEY
-    .replace(/^"(.*)"$/s, '$1')
-    .replace(/\\n/g, '\n')
-    .trim();
 
   const assertion = jwt.sign(payload, privateKey, {
     algorithm: 'RS256'
@@ -56,39 +51,52 @@ async function getAccessToken() {
   params.append('client_secret', CLIENT_SECRET);
   params.append('assertion', assertion);
 
-  const response = await axios.post(
-    'https://auth.worksmobile.com/oauth2/v2.0/token',
-    params,
-    {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
+  try {
+    const response = await axios.post(
+      'https://auth.worksmobile.com/oauth2/v2.0/token',
+      params,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
       }
-    }
-  );
+    );
 
-  return response.data.access_token;
+    console.log('✅ token取得成功');
+    return response.data.access_token;
+  } catch (e) {
+    console.error('❌ token取得失敗:', e.response?.data || e.message);
+    throw e;
+  }
 }
 
 // メッセージ送信
 async function sendMessage(userId, token, text) {
-  await axios.post(
-    `https://www.worksapis.com/v1.0/bots/${BOT_ID}/users/${userId}/messages`,
-    {
-      content: {
-        type: 'text',
-        text
+  try {
+    await axios.post(
+      `https://www.worksapis.com/v1.0/bots/${BOT_ID}/users/${userId}/messages`,
+      {
+        content: {
+          type: 'text',
+          text
+        }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       }
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
+    );
+
+    console.log('✅ メッセージ送信成功');
+  } catch (e) {
+    console.error('❌ メッセージ送信失敗:', e.response?.data || e.message);
+    throw e;
+  }
 }
 
-// 受信 → Hello World返信
+// Webhook受信
 app.post('/', async (req, res) => {
   console.log('受信:', JSON.stringify(req.body, null, 2));
   res.sendStatus(200);
@@ -102,9 +110,8 @@ app.post('/', async (req, res) => {
     const token = await getAccessToken();
     await sendMessage(userId, token, 'Hello World');
 
-    console.log('✅ 送信成功');
   } catch (e) {
-    console.error('❌ エラー:', e.response?.data || e.message);
+    console.error('❌ 全体エラー:', e.response?.data || e.message);
   }
 });
 
@@ -113,6 +120,8 @@ app.get('/', (req, res) => {
   res.send('Hello World Server');
 });
 
-app.listen(10000, () => {
-  console.log('Server started');
+// Render対応PORT
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`Server started on ${PORT}`);
 });
