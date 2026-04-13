@@ -144,7 +144,19 @@ if (process.env.CRON === 'true') {
       const token = await getAccessToken();
       const userId = process.env.LW_TARGET_USER_ID;
 
-      await sendMessage(userId, token, 'Hello World');
+      // ここから
+      await sendMessage(
+  userId,
+  token,
+  `毎月10日・15日・20日・25日はクリーンデーです🧹
+
+次回クリーンデーの日時と場所を確認しています。
+予定通りでよろしいでしょうか？
+
+天気予報はこちら👇
+https://weathernews.jp/onebox/tenki/okinawa/47311/`
+);
+      // ここまで
 
       console.log('✅ Cron送信成功');
       process.exit(0);
