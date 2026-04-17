@@ -2,7 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 
-console.log('🔥 CLEAN DAY BOT PRODUCTION 0417 🔥');
+console.log('🔥 CLEAN DAY BOT START (CHANNEL VERSION)');
 
 const app = express();
 app.use(express.json());
@@ -57,11 +57,17 @@ async function getAccessToken() {
 }
 
 // =======================
-// テキストメッセージ送信
+// グループ送信（channelId）
 // =======================
-async function sendMessage(userId, token, text) {
+async function sendMessage(token, text) {
+  const channelId = process.env.LW_TARGET_CHANNEL_ID;
+
+  if (!channelId) {
+    throw new Error('LW_TARGET_CHANNEL_ID が未設定です');
+  }
+
   await axios.post(
-    `https://www.worksapis.com/v1.0/bots/${BOT_ID}/users/${userId}/messages`,
+    `https://www.worksapis.com/v1.0/bots/${BOT_ID}/channels/${channelId}/messages`,
     {
       content: {
         type: 'text',
@@ -76,7 +82,7 @@ async function sendMessage(userId, token, text) {
     }
   );
 
-  console.log('✅ メッセージ送信成功');
+  console.log('✅ グループ送信成功');
 }
 
 // =======================
@@ -93,8 +99,9 @@ https://weathernews.jp/onebox/tenki/okinawa/47311/`;
 }
 
 // =======================
-// Webhook受信
+// Webhook受信（必要なら）
 // WEBHOOK=true のときだけ返信
+// ※ room/channel確認用に残してもOK
 // =======================
 app.post('/', async (req, res) => {
   console.log('📩 受信:', JSON.stringify(req.body, null, 2));
@@ -102,18 +109,53 @@ app.post('/', async (req, res) => {
 
   try {
     if (req.body.type !== 'message') return;
-    if (!req.body.source?.userId) return;
-
-    const userId = req.body.source.userId;
 
     if (process.env.WEBHOOK !== 'true') {
       console.log('📩 受信のみモード（返信しない）');
       return;
     }
 
+    const source = req.body.source || {};
     const token = await getAccessToken();
-    await sendMessage(userId, token, 'メッセージ受信しました。');
 
+    if (source.userId) {
+      await axios.post(
+        `https://www.worksapis.com/v1.0/bots/${BOT_ID}/users/${source.userId}/messages`,
+        {
+          content: {
+            type: 'text',
+            text: 'メッセージ受信しました。'
+          }
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      console.log('✅ 個人返信成功');
+      return;
+    }
+
+    if (source.channelId) {
+      await axios.post(
+        `https://www.worksapis.com/v1.0/bots/${BOT_ID}/channels/${source.channelId}/messages`,
+        {
+          content: {
+            type: 'text',
+            text: 'メッセージ受信しました。'
+          }
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      console.log('✅ グループ返信成功');
+    }
   } catch (e) {
     console.error('❌ Webhookエラー:', e.response?.data || e.message);
   }
@@ -133,8 +175,8 @@ app.listen(PORT, () => {
 
 // =======================
 // Cron実行
-// RenderのCronは 0 9 * * * にする
-// 毎日9:00に1回起動し、対象日だけ送信
+// RenderのCronは 0 0 * * * にする
+// 毎日9:00 JST に1回起動し、対象日だけ送信
 // =======================
 if (process.env.CRON === 'true') {
   (async () => {
@@ -155,13 +197,7 @@ if (process.env.CRON === 'true') {
       console.log('🎯 送信条件一致');
 
       const token = await getAccessToken();
-      const userId = process.env.LW_TARGET_USER_ID;
-
-      if (!userId) {
-        throw new Error('LW_TARGET_USER_ID が未設定です');
-      }
-
-      await sendMessage(userId, token, buildCleanDayMessage());
+      await sendMessage(token, buildCleanDayMessage());
 
       console.log('✅ Cron送信成功');
       process.exit(0);
