@@ -2,8 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 
-console.log('🔥 NEW VERSION 🔥');
-console.log('🔥 CLEAN DAY BOT 🔥');
+console.log('🔥 CLEAN DAY BOT PRODUCTION 0417 🔥');
 
 const app = express();
 app.use(express.json());
@@ -58,7 +57,7 @@ async function getAccessToken() {
 }
 
 // =======================
-// メッセージ送信
+// テキストメッセージ送信
 // =======================
 async function sendMessage(userId, token, text) {
   await axios.post(
@@ -81,7 +80,21 @@ async function sendMessage(userId, token, text) {
 }
 
 // =======================
-// Webhook（受信のみモード対応）
+// クリーンデー通知本文
+// =======================
+function buildCleanDayMessage() {
+  return `毎月10日・15日・20日・25日はクリーンデーです🧹
+
+次回クリーンデーの日時と場所を確認しています。
+予定通りでよろしいでしょうか？
+
+天気予報はこちら👇
+https://weathernews.jp/onebox/tenki/okinawa/47311/`;
+}
+
+// =======================
+// Webhook受信
+// WEBHOOK=true のときだけ返信
 // =======================
 app.post('/', async (req, res) => {
   console.log('📩 受信:', JSON.stringify(req.body, null, 2));
@@ -93,15 +106,13 @@ app.post('/', async (req, res) => {
 
     const userId = req.body.source.userId;
 
-    // Webhook返信ON/OFF
     if (process.env.WEBHOOK !== 'true') {
       console.log('📩 受信のみモード（返信しない）');
       return;
     }
 
     const token = await getAccessToken();
-
-    await sendMessage(userId, token, 'メッセージ受信しました');
+    await sendMessage(userId, token, 'メッセージ受信しました。');
 
   } catch (e) {
     console.error('❌ Webhookエラー:', e.response?.data || e.message);
@@ -121,7 +132,9 @@ app.listen(PORT, () => {
 });
 
 // =======================
-// Cron（2日前 朝9時送信）
+// Cron実行
+// RenderのCronは 0 9 * * * にする
+// 毎日9:00に1回起動し、対象日だけ送信
 // =======================
 if (process.env.CRON === 'true') {
   (async () => {
@@ -130,14 +143,11 @@ if (process.env.CRON === 'true') {
 
       const now = new Date();
       const day = now.getDate();
-      const hour = now.getHours();
-      const minute = now.getMinutes();
 
-      // 2日前の日付
+      // クリーンデー（10,15,20,25）の2日前
       const targetDays = [8, 13, 18, 23];
 
-      // 朝9:00のみ送信
-      if (!targetDays.includes(day) || hour !== 9 || minute !== 0) {
+      if (!targetDays.includes(day)) {
         console.log('⏭ 条件外スキップ');
         process.exit(0);
       }
@@ -147,17 +157,11 @@ if (process.env.CRON === 'true') {
       const token = await getAccessToken();
       const userId = process.env.LW_TARGET_USER_ID;
 
-      await sendMessage(
-        userId,
-        token,
-        `毎月10日・15日・20日・25日はクリーンデーです🧹
+      if (!userId) {
+        throw new Error('LW_TARGET_USER_ID が未設定です');
+      }
 
-次回クリーンデーの日時と場所を確認しています。
-予定通りでよろしいでしょうか？
-
-天気予報はこちら👇
-https://weathernews.jp/onebox/tenki/okinawa/47311/`
-      );
+      await sendMessage(userId, token, buildCleanDayMessage());
 
       console.log('✅ Cron送信成功');
       process.exit(0);
